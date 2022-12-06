@@ -1,0 +1,189 @@
+//iService.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.ServiceModel;
+using System.ServiceModel.Web;
+using System.Text;
+
+// NOTE: You can use the "Rename" command on the "Refactor" menu to change the interface name "IService" in both code and config file together.
+[ServiceContract]
+public interface IService
+{
+
+	[OperationContract]
+    List<student> studdis();
+
+    [OperationContract]
+    //String studins(student s);
+    string studins(student s);
+
+
+
+
+    // TODO: Add your service operations here
+}
+
+// Use a data contract as illustrated in the sample below to add composite types to service operations.
+[DataContract]
+public class student
+{
+    [DataMember]
+    public int rno { get; set; }
+
+    [DataMember]
+    public string sname { get; set; }
+
+    [DataMember]
+    public string course { get; set; }
+
+    [DataMember]
+    public string email { get; set; }
+
+    [DataMember]
+    public string mno { get; set; }
+
+    [DataMember]
+    public string dob { get; set; }
+
+}
+
+
+//Service.cs
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.ServiceModel;
+using System.ServiceModel.Web;
+using System.Text;
+using System.Data;
+using System.Data.SqlClient;
+
+
+// NOTE: You can use the "Rename" command on the "Refactor" menu to change the class name "Service" in code, svc and config file together.
+public class Service : IService
+{
+    SqlConnection con = new SqlConnection("Data Source=LAPTOP-UM409B6F;Initial Catalog=sh;Integrated Security=True");
+    public List<student> studdis()
+    {
+
+        
+        student s;
+        con.Open();
+        List<student> ls = new List<student>();
+        SqlCommand cmd = new SqlCommand("select * from tbl_student1", con);
+        SqlDataReader dr = cmd.ExecuteReader();
+        if (dr.HasRows)
+        {
+            while (dr.Read())
+            {
+                s = new student();
+                s.rno = Convert.ToInt16(dr[0]);
+                s.sname = dr[1].ToString();
+                s.course = dr[2].ToString();
+                s.email = dr[3].ToString();
+                s.mno = dr[4].ToString();
+                s.dob = dr[5].ToString();
+                ls.Add(s);
+            }
+        }
+        return ls;
+        con.Close();
+    }
+
+    public string studins(student s)
+    {
+        con.Open();
+        string sd;
+        List<student> ls = new List<student>();
+        SqlCommand cmd = new SqlCommand("insert into tbl_student1 values('"+s.sname+"','"+s.course+"','"+s.email+"','"+s.mno+"','"+s.dob+"')",con);
+        var ans = cmd.ExecuteNonQuery();
+        if (ans==1)
+        {
+            sd = "insert suc";
+        }
+        else
+        {
+            sd = "insert not";
+        }
+        con.Close();
+        return sd;
+    }
+}
+
+
+//Default.aspx
+
+<%@ Page Language="C#" AutoEventWireup="true" CodeFile="Default.aspx.cs" Inherits="_Default" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title></title>
+</head>
+<body>
+    <form id="form1" runat="server">
+    <div>
+    Enter name:<asp:TextBox ID="txtname" runat="server"></asp:TextBox>
+        Enter course<asp:TextBox ID="txtcou" runat="server"></asp:TextBox>
+        emeil<asp:TextBox ID="txtemail" runat="server"></asp:TextBox>
+        mno<asp:TextBox ID="txtmno" runat="server"></asp:TextBox>
+        dob<asp:TextBox ID="txtdob" runat="server"></asp:TextBox>
+        <asp:Button ID="btninsert" runat="server" Text="Insert" OnClick="btninsert_Click" />
+        <asp:GridView ID="GridView1" runat="server">
+        </asp:GridView>
+    
+    </div>
+    </form>
+</body>
+</html>
+
+
+//Default.aspx.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using ServiceReference1;
+
+public partial class _Default : System.Web.UI.Page
+{
+    ServiceClient sc = new ServiceClient();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+      
+    
+        load_data();
+    }
+
+    public void load_data()
+    {
+        var res = sc.studdis();
+        GridView1.DataSource = res;
+        GridView1.DataBind();
+    }
+
+    protected void btninsert_Click(object sender, EventArgs e)
+    {
+
+        student s = new student();
+       // s.rno = Convert.ToInt16(txtrno.Text);
+        s.sname = txtname.Text;
+        s.course = txtcou.Text;
+        s.email = txtemail.Text;
+        s.mno = txtmno.Text;
+        s.dob = txtdob.Text;
+        string res = sc.studins(s);
+        load_data();
+
+    }
+}
