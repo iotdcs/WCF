@@ -1,0 +1,274 @@
+//server.js
+
+const express=require('express');
+const mongoose=require('mongoose');
+const cors=require('cors');
+const eroutes=require('./routes/emproutes')
+
+const app=express()
+mongoose.connect("mongodb://localhost:27017/dbemployee")
+
+app.use(express.json())
+app.use(cors())
+app.use('/eroutes',eroutes)
+
+app.listen(5005,()=>{
+    console.log("server is running")
+})
+
+
+//models---->empmodels.js
+
+const mongoose=require('mongoose');
+const empmodels=new mongoose.Schema({
+    empno:{
+        type:Number,
+        required:true,
+    },
+    ename:{
+        type:String,
+        required:true,
+    },
+    des:{
+        type:String,
+        required:true,
+    },
+    dob:{
+        type:Date,
+        default:Date.now
+    }
+})
+module.exports=mongoose.model("tblemp",empmodels)
+
+
+//routes---->emproutes.js
+
+const express=require('express')
+const router=express.Router()
+const empmodels=require("../models/empmodels")
+
+router.post('/addemp',async(req,res)=>{
+    
+    const empsave=new empmodels({
+        empno:req.body.empno,
+        ename:req.body.ename,
+        des:req.body.des
+    })
+   empsave.save();
+})
+
+router.get('/disemp',async(req,res)=>{
+    const data=await empmodels.find();
+    res.json(data)
+})
+
+router.delete('/delemp/:id',async(req,res)=>{
+    const data=await empmodels.findByIdAndDelete(req.params.id);
+    res.send({Response:"success"})
+})
+
+module.exports=router
+
+// test.rest
+
+POST http://localhost:5005/eroutes/addemp
+content-type: application/json
+
+{
+    "empno": "21",
+    "ename": "eeeee",
+    "des":"xxx"
+}
+
+###
+GET http://localhost:5005/eroutes/disemp
+
+###
+DELETE http://localhost:5005/eroutes/delemp/638fe8be44eb34af28b1956a
+
+
+//----------Client Side-----------//
+
+//App.js
+
+
+//import logo from './logo.svg';
+import { Route, Routes } from 'react-router-dom';
+import './App.css';
+import Delete from './Delete';
+import Edit from './Edit';
+import Insert from './Insert';
+import Navbar from './Navbar';
+
+function App() {
+  return (
+    <div className="App">
+      <Navbar/>
+      <Routes>
+        <Route path="insert" element={<Insert></Insert>}></Route>
+        <Route path="deletepage" element={<Delete></Delete>}></Route>
+        <Route path="editpage" element={<Edit></Edit>}></Route>
+      </Routes>
+    </div>
+  );
+}
+
+export default App;
+
+//Insert.js
+
+import axios from 'axios';
+import React, { useEffect, useState } from 'react'
+
+const Insert = () => {
+    const[data,setData]=useState([]);
+    const[emp,setEmp]=useState({
+         empno:0,
+         ename:"",
+         des:""
+    });
+
+    useEffect(()=>{
+        const getdata=async(e)=>{
+            const result=await axios.get("http://localhost:5005/eroutes/disemp")
+            setData(result.data)
+        }
+        getdata()
+    },[data])
+
+    const emprecord=data.map((d)=>{
+        return(
+        <>
+          <tr>
+            <td>{d.empno}</td>
+            <td>{d.ename}</td>
+            <td>{d.des}</td>
+            <td>{d.dob}</td>
+            <td><a href={"deletepage?id="+d._id}>Delete</a></td>
+          </tr>
+        </>
+        )
+    })
+    
+    
+    const empAdd=async(e)=>{
+        e.preventDefault();
+        const{empno,ename,des}=emp;
+        const empInsert=await axios.post("http://localhost:5005/eroutes/addemp",{empno,ename,des})
+        if(empInsert){
+            alert("Inserted sucessfully");
+        }else{
+            alert("somthing wrong");
+        }
+        emp.empno="";
+        emp.ename="";
+        emp.des="";
+    }
+  return (
+    <>
+    <center>
+      <table>
+        <tr>
+            <td colSpan={2}><h1>Employee Records...</h1></td>
+        </tr>
+        <tr>
+            <td>Employee No : </td>
+            <td><input type="Number" onChange={(e)=>{setEmp({...emp,empno:e.target.value})}}/></td>
+        </tr>
+        <tr>
+            <td>Employee Name : </td>
+            <td><input type="text" onChange={(e)=>{setEmp({...emp,ename:e.target.value})}}/></td>
+        </tr>
+        <tr>
+            <td>Employee Designation : </td>
+            <td><input type="text" onChange={(e)=>{setEmp({...emp,des:e.target.value})}}/></td>
+        </tr>
+        <tr>   
+            <td colSpan={2}> <center><input type="submit" value="Insert" onClick={empAdd}/> </center></td> 
+        </tr>
+      </table>
+      <table>
+        <tr>
+            <th>Employee No</th>
+            <th>Employee Name</th>
+            <th>Employee Designation</th>
+            <th>Employee Dob</th>
+            <th>Delete</th>
+        </tr>
+        {emprecord}
+      </table>
+    </center>
+    </>
+  )
+}
+
+export default Insert
+
+//Delete.js
+
+import axios from 'axios';
+import React, { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+
+
+const Delete = () => {
+    const[param]=useSearchParams();
+    useEffect(()=>{
+      const del=async()=>{
+        const result=await axios.delete("http://localhost:5005/eroutes/delemp/"+param.get('id'))
+        console.log(result)
+        window.location="insert";
+      }
+      del();
+    },[])
+  return (
+    <div>Delete</div>
+  )
+}
+
+export default Delete
+
+//Edit.js
+
+import React from 'react'
+
+const Edit = () => {
+  return (
+    <div>Edit</div>
+  )
+}
+
+export default Edit
+
+//Navbar.js
+
+import React from 'react'
+
+const Navbar = () => {
+  return (
+    <div><a href={"insert"}>Insert</a></div>
+  )
+}
+
+export default Navbar
+
+//Index.js
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+import { BrowserRouter } from 'react-router-dom';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <BrowserRouter>
+   <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  </BrowserRouter>
+   
+);
+
+reportWebVitals();

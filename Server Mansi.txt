@@ -1,0 +1,185 @@
+//server.js
+
+const express=require('express');
+const mongoose=require('mongoose');
+const cors=require('cors');
+const emproutes=require('./routes/emproutes')
+
+const app=express()
+mongoose.connect('mongodb://localhost:27017/Database')
+
+app.use(express.json())
+app.use(cors())
+app.use('/emproutes',emproutes)
+
+app.listen(5001,()=>{
+    console.log("Server is running")
+})
+
+
+//models--->empmodels.js
+
+const mongoose=require('mongoose')
+const emp=new mongoose.Schema({
+    name:{
+        type:String,
+        required:true,
+    },
+    email:{
+        type:String,
+        required:true
+    }
+})
+module.exports=mongoose.model('emp_master',emp)
+
+//routes----->emproutes.js
+
+
+const express=require('express')
+const router=express.Router()
+const empmodels=require('../models/empmodels')
+
+router.post('/empadd',async(req,res)=>{
+    const saveemp=new empmodels({
+        name:req.body.name,
+        email:req.body.email
+    })
+    saveemp.save()
+    res.json({data:saveemp , message: "added"})
+})
+
+router.get('/empdis',async(req,res)=>{
+    const data=await empmodels.find()
+    res.json(data)
+})
+router.delete('/del/:id',async(req,res)=>{
+   const del=await empmodels.findByIdAndDelete(req.params.id)
+   res.json(del)
+    
+})
+router.get('/ser/:id',async(req,res)=>{
+    const serdata=await empmodels.findById(req.params.id);
+    res.send(serdata);
+})
+
+module.exports=router
+
+//test.rest
+
+POST http://localhost:5001/emproutes/empadd
+content-type: application/json
+
+{
+    "name": "princy",
+    "email":"princy@gmail.com"
+}
+
+###
+GET http://localhost:5001/emproutes/empdis
+
+###
+DELETE http://localhost:5001/emproutes/del/638fe63cfe254c9f2168cf36
+###
+GET http://localhost:5001/emproutes/ser/638fe63cfe254c9f2168cf36
+
+
+//---------Client Side---------//
+
+
+//App.js
+
+//import logo from './logo.svg';
+import './App.css';
+import Insert from './Insert';
+
+function App() {
+  return (
+    <div className="App">
+        <Insert></Insert>
+    </div>
+  );
+}
+
+export default App;
+
+
+//Insert.js
+
+import axios from 'axios'
+import React, { useEffect, useState } from 'react'
+
+const Insert = () => {
+    const[data,setData]=useState([])
+    const[emp,setEmp]=useState({
+        name:"",
+        email:""
+    })
+
+    const AddEmp=async(e)=>{
+        e.preventDefault();
+        //console.log(emp);
+        const { name,email } = emp;
+        const EmpInsert = await axios.post('http://localhost:5001/emproutes/empadd', { name,email});
+        if (EmpInsert) {
+            alert("New Employee added.")
+        }
+    }
+
+    useEffect(()=>{
+        const getdata=async(e)=>{
+            try{
+               const result=await axios.get('http://localhost:5001/emproutes/empdis')
+               setData(result.data)
+            }catch(error){
+               console.log(error)
+            }
+        }
+        getdata();
+    },[data])
+
+    
+    const empRecord=data.map((d)=>{
+        return(
+            <>
+              <tr>
+                <td>{d.name}</td>
+                <td>{d.email}</td>
+              </tr>
+            </>
+        )
+    })
+  return (
+    <>
+      <center>
+        <form>
+            <table>
+                <tr>
+                    <td colSpan={2}><h2>Employee Records</h2></td>
+                </tr>
+                <tr>
+                    <td>Employee Name : </td>
+                    <td><input type="text" name="name" onChange={(e)=>{setEmp({...emp,name:e.target.value})}}/></td>
+                </tr>
+                <tr>
+                    <td>Employee Email : </td>
+                    <td><input type="text" name="email" onChange={(e)=>{setEmp({...emp,email:e.target.value})}}/></td>
+                </tr>
+                <tr>
+                    <td><input type="submit" value="Insert" onClick={AddEmp}/></td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <th>Employee Name</th>
+                    <th>Employee Email</th>
+                </tr>
+                {empRecord}
+            </table>
+        </form>
+      </center>
+    </>
+  )
+}
+
+export default Insert
+
